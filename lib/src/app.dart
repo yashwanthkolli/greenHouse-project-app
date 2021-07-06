@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' show get;
 import 'dart:convert';
-import './models/image_model.dart';
-import './widgets/image_list.dart';
+import './models/parameter_model.dart';
+import './widgets/parameters_list.dart';
 
 class App extends StatefulWidget {
   createState() {
@@ -11,19 +11,19 @@ class App extends StatefulWidget {
 }
 
 class AppState extends State<App> {
-  int counter = 0;
-  List<ImageModel> images = [];
+  Map<String, String> parameters = {
+    'temp': 'Temprature',
+    'humid': 'Humidity',
+    'light': 'Light',
+    'moisture': 'Moisture'
+  };
   Map<String, dynamic> temp = {};
   Map<String, dynamic> humid = {};
   Map<String, dynamic> light = {};
   Map<String, dynamic> moisture = {};
-  List<Map> arr = [];
+  List<ParameterModel> arr = [];
 
-  void fetchImage() async {
-    counter++;
-    var response =
-        await get('https://jsonplaceholder.typicode.com/photos/$counter');
-    var imageModel = ImageModel.fromJson(json.decode(response.body));
+  void fetchData() async {
     var tempResponse = await get(
         'https://api.thingspeak.com/channels/1322875/fields/1.json?api_key=RES3E1CL3T7GMAUD&results=1');
     var humidResponse = await get(
@@ -33,33 +33,39 @@ class AppState extends State<App> {
     var moistureResponse = await get(
         'https://api.thingspeak.com/channels/1322875/fields/4.json?api_key=RES3E1CL3T7GMAUD&results=1');
 
-    temp = json.decode(tempResponse.body);
-    humid = json.decode(humidResponse.body);
-    light = json.decode(lightResponse.body);
-    moisture = json.decode(lightResponse.body);
+    temp = json.decode(tempResponse.body)["feeds"][0];
+    humid = json.decode(humidResponse.body)["feeds"][0];
+    light = json.decode(lightResponse.body)["feeds"][0];
+    moisture = json.decode(moistureResponse.body)["feeds"][0];
+
+    var tempModel = ParameterModel.create(
+        'Temprature', temp["entry_id"], temp["created_at"], temp["field1"]);
+
+    var humidModel = ParameterModel.create(
+        "Humidity", humid["entry_id"], humid["created_at"], humid["field2"]);
+
+    var lightModel = ParameterModel.create(
+        "Light", light["entry_id"], light["created_at"], light["field3"]);
+
+    var moistureModel = ParameterModel.create("Moisture", moisture["entry_id"],
+        moisture["created_at"], moisture["field4"]);
 
     setState(() {
       arr = [];
-      images.add(imageModel);
-      arr.add(temp["feeds"][0]);
-      arr.add(humid["feeds"][0]);
-      arr.add(light["feeds"][0]);
-      arr.add(moisture["feeds"][0]);
+      arr.addAll([tempModel, humidModel, lightModel, moistureModel]);
     });
-
-    print(arr);
   }
 
   Widget build(context) {
     return MaterialApp(
       home: Scaffold(
-        body: ImageList(images, arr),
+        body: ParametersList(arr),
         floatingActionButton: FloatingActionButton(
           child: Icon(Icons.add),
-          onPressed: fetchImage,
+          onPressed: fetchData,
         ),
         appBar: AppBar(
-          title: Text('Lets see some images'),
+          title: Text('GreenHouse Project'),
         ),
       ),
     );
